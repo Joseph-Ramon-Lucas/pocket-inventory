@@ -10,9 +10,11 @@ import {
 	type UserCredentials,
 	userCredentialSchema,
 	type ValidUser,
+	type ErrorResult,
 } from "./types";
 import { eq } from "drizzle-orm";
 import { db } from "./db";
+
 import { usersTable } from "./db/schema";
 
 // if parsing fails, will return a list of string error messages
@@ -79,3 +81,19 @@ export async function verifyUsername(
 //     const new Promise<void>((resolve, reject) =>
 //         await setTimeout(ms))
 // }
+
+export async function checkUserInDb(
+	inputData: UserCredentials,
+): Promise<
+	{ userId: number; username: string; password: string }[] | ErrorResult
+> {
+	const lookupResults = await db
+		.select()
+		.from(usersTable)
+		.where(eq(usersTable.username, inputData.username))
+		.limit(1)
+		.catch((e) => {
+			return errorResponse(e);
+		});
+	return lookupResults;
+}

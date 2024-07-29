@@ -7,7 +7,14 @@ CREATE DATABASE InventoryDb;
 CREATE TABLE users (
     userId INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     username TEXT NOT NULL,
-    password TEXT
+    password TEXT NOT NULL
+);
+
+CREATE TABLE tokens (
+    sessionId UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    userId INT NOT NULL,
+    FOREIGN KEY (userId) REFERENCES users(userId)
+
 );
 
 

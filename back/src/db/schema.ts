@@ -7,6 +7,7 @@ import {
 	real,
 	serial,
 	text,
+	uuid,
 } from "drizzle-orm/pg-core";
 
 export const usersTable = pgTable("users", {
@@ -40,3 +41,7 @@ export const ownersView = pgView("ownersview").as((qb) =>
 		.fullJoin(usersTable, eq(usersTable.userId, usersOwnStuffTable.ownerId))
 		.fullJoin(stuffTable, eq(stuffTable.itemId, usersOwnStuffTable.itemId)),
 );
+export const tokenTable = pgTable("tokens", {
+	sessionId: uuid("sessionid").primaryKey().defaultRandom(),
+	userId: integer("userid").references(() => usersTable.userId),
+});

@@ -12,7 +12,9 @@ import {
 	stuffTable,
 	usersOwnStuffTable,
 	usersTable,
+	tokenTable,
 } from "./db/schema";
+
 import {
 	errorResponse,
 	successResponse,
@@ -30,6 +32,9 @@ import {
 	verifyStuffBodyInsert,
 	verifyUsername,
 } from "./utils";
+import { isValid, z } from "zod";
+import { checkUserInDb } from "./utils";
+import { uuid } from "drizzle-orm/pg-core";
 
 // salts for password
 const saltRounds = 10;
@@ -51,12 +56,6 @@ app.get("/api/", (req: Request, res: Response) => {
 app.post("/api/account/register", async (req: Request, res: Response) => {
 	// check if body is empty
 	console.log("HERE IS THE REQ BODY", req.body);
-
-	// if (Object.keys(req.body).length < 2) {
-	// 	return res
-	// 		.status(400)
-	// 		.json({ error: "request body missing username and password fields" });
-	// }
 
 	// check if user input meets requirement
 	const inputData: UserCredentials = req.body;
@@ -81,14 +80,12 @@ app.post("/api/account/register", async (req: Request, res: Response) => {
 
 	try {
 		// check if this user already exists
-		const lookupResults = await db
-			.select()
-			.from(usersTable)
-			.where(eq(usersTable.username, inputData.username))
-			.limit(1)
-			.catch((e) => {
-				return res.status(500).json(errorResponse(e));
-			});
+		const lookupResults = await checkUserInDb(inputData).catch((e) => {
+			console.error("issue fetching user from db", e);
+			return res.status(500).json(e);
+		});
+
+		console.log(lookupResults, "LOOKUP");
 
 		// determine it's an array to use length method
 		if (Array.isArray(lookupResults) && lookupResults.length > 0) {
@@ -139,40 +136,43 @@ app.post("/api/account/login", async (req: Request, res: Response) => {
 
 	// check if username exists
 	try {
-		await db
-			.select()
-			.from(usersTable)
-			.where(eq(usersTable.username, inputData.username))
-			.limit(1)
-			.then(async (results) => {
-				// username doesn't exist
-				if (results.length < 1 || results == null) {
-					return res
-						.status(400)
-						.json(
-							errorResponse(`Username, ${inputData.username} doesn't exist!`),
-						);
-				}
-				console.log("selection results=", results);
-				const storedPassword: string = results[0].password;
+		const lookupResults = await checkUserInDb(inputData).catch((e) => {
+			console.error("issue fetching user from db", e);
+			return res.status(500).json(e);
+		});
 
-				// compare hash & password
-				const match = await bcrypt.compare(inputData.password, storedPassword);
-				// wrong password --> don't tell them that for security
+		// if username doesn't exist
+		if (Array.isArray(lookupResults) && lookupResults.length < 1) {
+			return res
+				.status(400)
+				.json(errorResponse(`Username, ${inputData.username} doesn't exist!`));
+		}
+		if (Array.isArray(lookupResults) && lookupResults.length > 0) {
+			console.log("selection results=", lookupResults);
+			const storedPassword: string = lookupResults[0].password;
+			// compare hash & password
+			const match = await bcrypt.compare(inputData.password, storedPassword);
+			// wrong password --> don't tell them that for security
 
-				if (!match) {
-					return res
-						.status(400)
-						.json(errorResponse("Incorrect Username or Password"));
-				}
+			if (!match) {
+				return res
+					.status(400)
+					.json(errorResponse("Incorrect Username or Password"));
+			}
 
-				// authenticate user
-
-				return res.status(200).send("it works!");
-			})
-			.catch((err) => {
-				return res.status(500).json(err);
-			});
+			// authenticate user
+			// token table
+			await db
+				.insert(tokenTable)
+				.values({
+					userId: lookupResults[0].userId,
+				})
+				.catch((e) => {
+					console.error("issue fetching user from db", e);
+					return res.status(500).json(e);
+				});
+			return res.status(200).send("it works!");
+		}
 	} catch (e) {
 		console.error(e);
 
@@ -180,6 +180,9 @@ app.post("/api/account/login", async (req: Request, res: Response) => {
 		return;
 	}
 });
+
+// reauthenticate when logged in
+app.post("/api/auth", async (req: Request, res: Response) => {});
 
 app.get("/search", (req: Request, res: Response) => {
 	const q = JSON.stringify(req.query.something);
