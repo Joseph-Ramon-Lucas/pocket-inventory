@@ -4,12 +4,18 @@ import { Button } from "@/components/ui/button";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { useState } from "react";
+import axios from "axios";
 
 export function Login() {
 	const [username, setUsername] = useState("");
 	const [password, setPassword] = useState("");
 	const [errorText, setErrorText] = useState("");
 
+	async function handleSubmit(username: string, password: string) {
+		const reqBody = { username, password };
+		await axios.post("/api/account/login", reqBody, { withCredentials: true });
+		console.log("POSTED");
+	}
 	return (
 		<div>
 			<Link to="/">
@@ -52,7 +58,7 @@ export function Login() {
 
 				<div className="errorDiv">{errorText ?? (errorText && true)}</div>
 				<div className="submit">
-					<Button onClick={() => handleSubmit(username, password)}>
+					<Button onClick={async () => await handleSubmit(username, password)}>
 						Submit
 					</Button>
 				</div>

@@ -42,6 +42,6 @@ export const ownersView = pgView("ownersview").as((qb) =>
 		.fullJoin(stuffTable, eq(stuffTable.itemId, usersOwnStuffTable.itemId)),
 );
 export const tokenTable = pgTable("tokens", {
-	sessionId: uuid("sessionid").primaryKey().defaultRandom(),
+	tokenId: uuid("tokenid").primaryKey().defaultRandom(),
 	userId: integer("userid").references(() => usersTable.userId),
 });

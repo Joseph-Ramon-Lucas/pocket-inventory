@@ -11,7 +11,7 @@ CREATE TABLE users (
 );
 
 CREATE TABLE tokens (
-    sessionId UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tokenId UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     userId INT NOT NULL,
     FOREIGN KEY (userId) REFERENCES users(userId)
 

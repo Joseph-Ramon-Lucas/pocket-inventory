@@ -35,7 +35,8 @@ import {
 import { isValid, z } from "zod";
 import { checkUserInDb } from "./utils";
 import { uuid } from "drizzle-orm/pg-core";
-
+import { CookieOptions } from "express";
+import cookieParser from "cookie-parser";
 // salts for password
 const saltRounds = 10;
 
@@ -46,6 +47,8 @@ const port = 3000;
 app.use(express.static("public"));
 //parse req.body in json
 app.use(json());
+// parse the cookies
+app.use(cookieParser());
 
 app.get("/api/", (req: Request, res: Response) => {
 	console.log("oi");
@@ -105,6 +108,7 @@ app.post("/api/account/register", async (req: Request, res: Response) => {
 				console.error(err);
 				return res.status(500).json(errorResponse(err));
 			});
+
 		return res.status(201).json(successResponseBody(insertResults));
 	} catch (e) {
 		console.error(e);
@@ -140,6 +144,7 @@ app.post("/api/account/login", async (req: Request, res: Response) => {
 			console.error("issue fetching user from db", e);
 			return res.status(500).json(e);
 		});
+		// console.log("LOOKYP:", lookupResults);
 
 		// if username doesn't exist
 		if (Array.isArray(lookupResults) && lookupResults.length < 1) {
@@ -159,22 +164,36 @@ app.post("/api/account/login", async (req: Request, res: Response) => {
 					.status(400)
 					.json(errorResponse("Incorrect Username or Password"));
 			}
+			// remove token if they already have it -- cookies don't work with thunderclient
+			const userToken = req.cookies.token;
+
+			if (userToken) {
+				console.log("USERTOKEN", userToken);
+
+				const deletedRow = await db
+					.delete(tokenTable)
+					.where(eq(tokenTable.tokenId, userToken))
+					.returning();
+
+				console.log("DELTED TOKEN ROW", deletedRow);
+			}
 
 			// authenticate user
-			// token table
-			await db
+			// make new token
+			const freshToken = await db
 				.insert(tokenTable)
 				.values({
 					userId: lookupResults[0].userId,
 				})
+				.returning({ freshToken: tokenTable.tokenId })
 				.catch((e) => {
 					console.error("issue fetching user from db", e);
 					return res.status(500).json(e);
 				});
-			return res.status(200).send("it works!");
+			return res.status(200).cookie("token", freshToken).send(freshToken);
 		}
 	} catch (e) {
-		console.error(e);
+		console.error("internal error:", e);
 
 		res.status(500).json(e);
 		return;
