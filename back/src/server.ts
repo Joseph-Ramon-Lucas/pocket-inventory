@@ -181,8 +181,9 @@ app.post("/api/account/login", async (req: Request, res: Response) => {
 					.status(400)
 					.json(errorResponse("Incorrect Username or Password"));
 			}
-			// remove token if they already have it -- cookies don't work with thunderclient
-			const userToken = req.cookies.token;
+			// remove token if they already have it
+			const userToken = req.cookies.token[0].freshToken;
+			console.log("loggin in with this token:", userToken);
 
 			if (userToken) {
 				console.log("USERTOKEN", userToken);
@@ -218,7 +219,29 @@ app.post("/api/account/login", async (req: Request, res: Response) => {
 });
 
 // reauthenticate when logged in
-app.post("/api/auth", async (req: Request, res: Response) => {});
+app.post("/api/account/auth", async (req: Request, res: Response) => {});
+
+app.post("/api/account/logout", async (req: Request, res: Response) => {
+	// remove token if they already have it
+	const userToken = req.cookies.token;
+	try {
+		if (userToken) {
+			console.log("USERTOKEN", userToken);
+
+			const deletedRow = await db
+				.delete(tokenTable)
+				.where(eq(tokenTable.tokenId, userToken))
+				.returning();
+
+			console.log("DELTED TOKEN ROW", deletedRow);
+		}
+	} catch (e) {
+		console.error("internal error:", e);
+
+		res.status(500).json(e);
+		return;
+	}
+});
 
 app.get("/search", (req: Request, res: Response) => {
 	const q = JSON.stringify(req.query.something);

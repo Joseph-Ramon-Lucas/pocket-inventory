@@ -35,7 +35,7 @@ export function CreateAccount() {
 				console.log("we got it");
 				setErrorText("");
 
-				// return redirect("/dashBoard")
+				// return redirect("/dashBoard");
 			} else {
 				return redirect("/api/account/login");
 			}

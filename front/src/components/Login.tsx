@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, redirect } from "react-router-dom";
 import "../App.css";
 import { Button } from "@/components/ui/button";
 import { Label } from "./ui/label";
@@ -12,9 +12,38 @@ export function Login() {
 	const [errorText, setErrorText] = useState("");
 
 	async function handleSubmit(username: string, password: string) {
+		if (
+			username.length < 3 ||
+			(username.length > 25 && password.length < 8) ||
+			password.length > 30
+		) {
+			setErrorText(
+				"qUsernames must be between 3-25 char, and passwords 8-30 char",
+			);
+			return;
+		}
+
 		const reqBody = { username, password };
-		await axios.post("/api/account/login", reqBody, { withCredentials: true });
-		console.log("POSTED");
+
+		try {
+			const postResults = await axios.post("/api/account/login", reqBody, {
+				withCredentials: true,
+			});
+			console.log(postResults);
+
+			if (postResults) {
+				console.log("wubmitted");
+				setErrorText("");
+			} else {
+				setErrorText("Could not log in");
+				// return redirect("/api/account/login");
+			}
+
+			console.log("POSTED");
+		} catch (e) {
+			console.error(e);
+			return;
+		}
 	}
 	return (
 		<div>
