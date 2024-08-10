@@ -11,38 +11,41 @@ export function Login() {
 	const [password, setPassword] = useState("");
 	const [errorText, setErrorText] = useState("");
 
-	async function handleSubmit(username: string, password: string) {
-		if (
+	function handleSubmit(username: string, password: string) {
+		// basic input checking
+		if (username.length === 0 || password.length === 0) {
+			setErrorText("Cannot leave blank fields!");
+		} else if (
 			username.length < 3 ||
 			(username.length > 25 && password.length < 8) ||
 			password.length > 30
 		) {
 			setErrorText(
-				"qUsernames must be between 3-25 char, and passwords 8-30 char",
+				"Usernames must be between 3-25 char, and passwords 8-30 char",
 			);
 			return;
-		}
+		} else {
+			const reqBody = { username, password };
 
-		const reqBody = { username, password };
+			try {
+				axios
+					.post("/api/account/login", reqBody, {
+						withCredentials: true,
+					})
+					.then((response) => {
+						setErrorText("");
+						console.log("THIS IS THE RESPONSE", response);
+					})
+					.catch((err) => {
+						console.error("ERRO HAPPENED,", err.response.data.errorMessage);
+						setErrorText(err.response.data.errorMessage);
+					});
 
-		try {
-			const postResults = await axios.post("/api/account/login", reqBody, {
-				withCredentials: true,
-			});
-			console.log(postResults);
-
-			if (postResults) {
-				console.log("wubmitted");
-				setErrorText("");
-			} else {
-				setErrorText("Could not log in");
-				// return redirect("/api/account/login");
+				console.log("POSTED");
+			} catch (e) {
+				console.error(e);
+				return;
 			}
-
-			console.log("POSTED");
-		} catch (e) {
-			console.error(e);
-			return;
 		}
 	}
 	return (

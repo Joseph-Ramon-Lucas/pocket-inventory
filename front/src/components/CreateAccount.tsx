@@ -25,20 +25,29 @@ export function CreateAccount() {
 		}
 	}, [password, retypePassword]);
 
-	async function handleSubmit(username: string, password: string) {
+	function handleSubmit(username: string, password: string) {
 		const postBody = { username: username, password: password };
 		console.log("postbody:", postBody);
 
 		try {
-			const postResult = await axios.post("/api/account/register", postBody);
-			if (postResult) {
-				console.log("we got it");
-				setErrorText("");
+			axios
+				.post("/api/account/register", postBody)
+				.then((response) => {
+					setErrorText("");
+					console.log("SUbmitted!");
+				})
+				.catch((err) => {
+					console.error(err);
+					setErrorText(err.response.data.errorMessage);
+				});
+			// if (postResult) {
+			// 	console.log("we got it");
+			// 	setErrorText("");
 
-				// return redirect("/dashBoard");
-			} else {
-				return redirect("/api/account/login");
-			}
+			// 	// return redirect("/dashBoard");
+			// } else {
+			// 	return redirect("/api/account/login");
+			// }
 		} catch (e) {
 			console.error(e);
 			return;
@@ -104,7 +113,7 @@ export function CreateAccount() {
 							} else if (username.length < 1) {
 								setErrorText("Cannot create an account with empty username");
 							} else {
-								setErrorText("Cannot create an account until passwords match");
+								setErrorText("Please retype your password correctly");
 								return;
 							}
 						}}

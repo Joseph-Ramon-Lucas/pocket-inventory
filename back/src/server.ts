@@ -31,13 +31,14 @@ import {
 	verifyCredentialLength,
 	verifyStuffBodyInsert,
 	verifyUsername,
+	checkUserInDb,
 } from "./utils";
 import { isValid, z } from "zod";
-import { checkUserInDb } from "./utils";
+
 import { uuid } from "drizzle-orm/pg-core";
 import { CookieOptions } from "express";
 import cookieParser from "cookie-parser";
-import { isArray } from "util";
+
 // salts for password
 const saltRounds = 10;
 
@@ -94,9 +95,7 @@ app.post("/api/account/register", async (req: Request, res: Response) => {
 		if (Array.isArray(lookupResults) && lookupResults.length > 0) {
 			return res
 				.status(400)
-				.json(
-					errorResponse(`Username ${inputData.username} is already in use`),
-				);
+				.json(errorResponse(`Username ${inputData.username} is not available`));
 		}
 
 		// store new user
@@ -157,6 +156,8 @@ app.post("/api/account/login", async (req: Request, res: Response) => {
 
 	// check if username exists
 	try {
+		console.log("verifying user credentials:", inputData);
+
 		const lookupResults = await checkUserInDb(inputData).catch((e) => {
 			console.error("issue fetching user from db", e);
 			return res.status(500).json(e);
@@ -165,9 +166,13 @@ app.post("/api/account/login", async (req: Request, res: Response) => {
 
 		// if username doesn't exist
 		if (Array.isArray(lookupResults) && lookupResults.length < 1) {
+			// console.log(lookupResults.length);
+			console.error(`Username, ${inputData.username} doesn't exist!`);
+
+			// wrong username --> don't tell them that for security
 			return res
-				.status(400)
-				.json(errorResponse(`Username, ${inputData.username} doesn't exist!`));
+				.status(418)
+				.json(errorResponse("Incorrect Username or Password"));
 		}
 		if (Array.isArray(lookupResults) && lookupResults.length > 0) {
 			console.log("selection results=", lookupResults);

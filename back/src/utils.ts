@@ -12,6 +12,7 @@ import {
 	type ValidUser,
 	type ErrorResult,
 } from "./types";
+
 import { eq } from "drizzle-orm";
 import { db } from "./db";
 
@@ -87,6 +88,8 @@ export async function checkUserInDb(
 ): Promise<
 	{ userId: number; username: string; password: string }[] | ErrorResult
 > {
+	console.log("checking the user in DB", inputData.username);
+
 	const lookupResults = await db
 		.select()
 		.from(usersTable)
@@ -95,6 +98,9 @@ export async function checkUserInDb(
 		.catch((e) => {
 			return errorResponse(e);
 		});
+
+	console.log("HERES THE RESULTS", lookupResults);
+
 	return lookupResults;
 }
 
