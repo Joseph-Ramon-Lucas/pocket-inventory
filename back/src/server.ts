@@ -17,7 +17,7 @@ import {
 	type UserCredentials,
 } from "./types";
 import { isValid, z } from "zod";
-import { checkUserInDb } from "./utils";
+import { checkUserInDb, verifyCredentialLength } from "./utils";
 import { uuid } from "drizzle-orm/pg-core";
 import { CookieOptions } from "express";
 import cookieParser from "cookie-parser";
@@ -34,15 +34,6 @@ app.use(express.static("public"));
 app.use(json());
 // parse the cookies
 app.use(cookieParser());
-
-function verifyCredentialLength(inputData: UserCredentials): RequestResult {
-	const parseResult = userCredentialSchema.safeParse(inputData);
-	if (!parseResult.success) {
-		// console.log(parseResult, "this is the parse result");
-		return errorResponse("Incorrect inputs when logging in");
-	}
-	return successResponse();
-}
 
 app.get("/api/", (req: Request, res: Response) => {
 	console.log("oi");
@@ -87,9 +78,7 @@ app.post("/api/account/register", async (req: Request, res: Response) => {
 		if (Array.isArray(lookupResults) && lookupResults.length > 0) {
 			return res
 				.status(400)
-				.json(
-					errorResponse(`Username ${inputData.username} is already in use`),
-				);
+				.json(errorResponse(`Username ${inputData.username} is not available`));
 		}
 
 		// store new user
@@ -150,6 +139,8 @@ app.post("/api/account/login", async (req: Request, res: Response) => {
 
 	// check if username exists
 	try {
+		console.log("verifying user credentials:", inputData);
+
 		const lookupResults = await checkUserInDb(inputData).catch((e) => {
 			console.error("issue fetching user from db", e);
 			return res.status(500).json(e);
@@ -158,9 +149,13 @@ app.post("/api/account/login", async (req: Request, res: Response) => {
 
 		// if username doesn't exist
 		if (Array.isArray(lookupResults) && lookupResults.length < 1) {
+			// console.log(lookupResults.length);
+			console.error(`Username, ${inputData.username} doesn't exist!`);
+
+			// wrong username --> don't tell them that for security
 			return res
-				.status(400)
-				.json(errorResponse(`Username, ${inputData.username} doesn't exist!`));
+				.status(418)
+				.json(errorResponse("Incorrect Username or Password"));
 		}
 		if (Array.isArray(lookupResults) && lookupResults.length > 0) {
 			console.log("selection results=", lookupResults);

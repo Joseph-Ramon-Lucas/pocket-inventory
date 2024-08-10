@@ -1,5 +1,12 @@
 import { promise, type z } from "zod";
-import { errorResponse, type ErrorResult, type UserCredentials } from "./types";
+import {
+	errorResponse,
+	type RequestResult,
+	successResponse,
+	userCredentialSchema,
+	type ErrorResult,
+	type UserCredentials,
+} from "./types";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 import { tokenTable, usersTable } from "./db/schema";
@@ -19,6 +26,17 @@ export function parseError(zodError: z.ZodError): string[] {
 	];
 }
 
+export function verifyCredentialLength(
+	inputData: UserCredentials,
+): RequestResult {
+	const parseResult = userCredentialSchema.safeParse(inputData);
+	if (!parseResult.success) {
+		// console.log(parseResult, "this is the parse result");
+		return errorResponse("Incorrect inputs when logging in");
+	}
+	return successResponse();
+}
+
 // // Timer Promise
 // export async function PromiseTime(ms: number): Promise<void> {
 //     const new Promise<void>((resolve, reject) =>
@@ -30,6 +48,8 @@ export async function checkUserInDb(
 ): Promise<
 	{ userId: number; username: string; password: string }[] | ErrorResult
 > {
+	console.log("checking the user in DB", inputData.username);
+
 	const lookupResults = await db
 		.select()
 		.from(usersTable)
@@ -38,6 +58,9 @@ export async function checkUserInDb(
 		.catch((e) => {
 			return errorResponse(e);
 		});
+
+	console.log("HERES THE RESULTS", lookupResults);
+
 	return lookupResults;
 }
 
