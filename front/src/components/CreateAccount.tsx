@@ -59,7 +59,7 @@ export function CreateAccount() {
 			<Link to="/">
 				<Button>Home 🏠</Button>
 			</Link>
-			<h1>Create your Cabinet Account</h1>
+			<h1>Create your Pocket Account</h1>
 			<div className="textfieldContainer">
 				<div className="textFields">
 					<div className="inputs">

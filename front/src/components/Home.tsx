@@ -9,7 +9,7 @@ export function Home() {
 	return (
 		<>
 			<div>
-				<h1>Cabinet 🗄️</h1>
+				<h1>Pocket 👖</h1>
 				<h2>Personal Inventory App</h2>
 
 				<div className="authButtons">

@@ -8,6 +8,7 @@ import { ErrorPage } from "./components/ErrorPage.tsx";
 import { Login } from "./components/Login.tsx";
 import { CreateAccount } from "./components/CreateAccount.tsx";
 import { ThemeProvider } from "./components/ui/theme-provider.tsx";
+import Dashboard from "./components/Dashboard.tsx";
 
 const router = createBrowserRouter([
 	{
@@ -25,6 +26,10 @@ const router = createBrowserRouter([
 	{
 		path: "/register",
 		element: <CreateAccount />,
+	},
+	{
+		path: "/dashboard",
+		element: <Dashboard />,
 	},
 ]);
 
