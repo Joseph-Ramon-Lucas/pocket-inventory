@@ -41,6 +41,7 @@ import cookieParser from "cookie-parser";
 
 // salts for password
 const saltRounds = 10;
+const salt = bcrypt.genSaltSync(saltRounds);
 
 const app: Express = express();
 const port = 3000;
@@ -78,11 +79,11 @@ app.post("/api/account/register", async (req: Request, res: Response) => {
 
 	console.log("reqbody:", req.body);
 
-	const hashWord = bcrypt.hashSync(inputData.password, saltRounds);
-
-	console.log("hash", hashWord);
-
 	try {
+		const hashWord = await bcrypt.hash(inputData.password, salt);
+
+		console.log("hash", hashWord);
+
 		// check if this user already exists
 		const lookupResults = await checkUserInDb(inputData).catch((e) => {
 			console.error("issue fetching user from db", e);
@@ -171,16 +172,19 @@ app.post("/api/account/login", async (req: Request, res: Response) => {
 
 			// wrong username --> don't tell them that for security
 			return res
-				.status(418)
+				.status(400)
 				.json(errorResponse("Incorrect Username or Password"));
 		}
 		if (Array.isArray(lookupResults) && lookupResults.length > 0) {
 			console.log("selection results=", lookupResults);
+
+			// hash user input
 			const storedPassword: string = lookupResults[0].password;
-			// compare hash & password
+
+			// compare both passwords
 			const match = await bcrypt.compare(inputData.password, storedPassword);
 			// wrong password --> don't tell them that for security
-
+			console.log("match?", match);
 			if (!match) {
 				return res
 					.status(400)
