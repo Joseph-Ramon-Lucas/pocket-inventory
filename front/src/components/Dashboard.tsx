@@ -22,7 +22,7 @@ import {
 export default function Dashboard() {
 	return (
 		<div>
-			<h1>Stuff</h1>
+			<h1>Stuff Dashboard</h1>
 			<div className="textfieldContainer">
 				{/* dropdown to select category */}
 				<DropdownMenu>
