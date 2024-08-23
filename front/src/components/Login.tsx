@@ -54,7 +54,7 @@ export function Login() {
 				<Button>Home 🏠</Button>
 			</Link>
 
-			<h1>Log into your Cabinet Account</h1>
+			<h1>Log into your Pocket Account</h1>
 
 			<div className="textfieldContainer">
 				<div className="textFields">
