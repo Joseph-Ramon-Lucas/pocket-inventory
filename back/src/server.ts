@@ -194,10 +194,64 @@ app.get("/api/stuff", async (req: Request, res: Response) => {
 
 	try {
 		const stuff = await db.select().from(stuffTable);
-		if (stuff.length < 1) {
+		if (stuff.length < 1 || stuff === null) {
 			return res.status(404).json(errorResponse("Data not found"));
 		}
-		res.status(200).json(successResponseBody(stuff));
+		return res.status(200).json(successResponseBody(stuff));
+	} catch (error) {
+		console.error(error);
+		return res.status(500).json(errorResponse(JSON.stringify(error)));
+	}
+});
+// get specific item in DB
+app.get("/api/stuff/:itemId", async (req: Request, res: Response) => {
+	try {
+		const itemId = Number.parseInt(req.params.itemId);
+		const stuff = await db
+			.select()
+			.from(stuffTable)
+			.where(eq(stuffTable.itemId, itemId))
+			.limit(1);
+		if (stuff.length < 1 || stuff === null) {
+			return res.status(404).json(errorResponse("Data not found"));
+		}
+		return res.status(200).json(successResponseBody(stuff));
+	} catch (error) {
+		console.error(error);
+		return res.status(500).json(errorResponse(JSON.stringify(error)));
+	}
+});
+
+// add an item to DB
+app.post("/api/stuff", async (req: Request, res: Response) => {
+	try {
+		const itemToAdd = req.body;
+		console.log(itemToAdd);
+
+		if (
+			itemToAdd.length < 1 ||
+			itemToAdd.itemId === null ||
+			itemToAdd.itemName === null
+		) {
+			return res
+				.status(400)
+				.json(errorResponse("Body missing itemId or itemName"));
+		}
+		// check for duplicate item Name
+		const result = await db
+			.select()
+			.from(stuffTable)
+			.where(eq(stuffTable.itemName, itemToAdd.itemName));
+
+		console.log("RESULT:", result, "length:", result.length);
+		if (result.length > 0) {
+			return res
+				.status(409)
+				.json(errorResponse(`Item Name ${itemToAdd.itemName} already exists`));
+		}
+		// insert into db
+		await db.insert(stuffTable).values(itemToAdd);
+		return res.status(201).json(successResponse);
 	} catch (error) {
 		console.error(error);
 		return res.status(500).json(errorResponse(JSON.stringify(error)));

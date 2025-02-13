@@ -1,4 +1,4 @@
-import { integer, primaryKey, serial, text } from "drizzle-orm/pg-core";
+import { integer, primaryKey, real, serial, text } from "drizzle-orm/pg-core";
 import { pgTable } from "drizzle-orm/pg-core";
 
 export const usersTable = pgTable("users", {
@@ -12,7 +12,7 @@ export const stuffTable = pgTable("stuff", {
 	itemName: text("itemname").notNull(),
 	quantity: integer("quantity"),
 	itemType: text("itemtype"),
-	itemValue: text("itemvalue"),
+	itemValue: real("itemvalue"),
 	location: text("location"),
 });
 
