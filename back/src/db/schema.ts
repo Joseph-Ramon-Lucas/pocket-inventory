@@ -6,3 +6,12 @@ export const usersTable = pgTable("users", {
 	username: text("username").notNull(),
 	password: text("password").notNull(),
 });
+
+export const stuffTable = pgTable("stuff", {
+	itemId: serial("itemid").primaryKey(),
+	itemName: text("itemname").notNull(),
+	quantity: serial("quantity"),
+	itemType: text("itemtype"),
+	itemValue: text("itemvalue"),
+	location: text("location"),
+});

@@ -7,8 +7,9 @@ import express, {
 import bcrypt from "bcrypt";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
-import { usersTable } from "./db/schema";
+import { stuffTable, usersTable } from "./db/schema";
 import {
+	errorMessage,
 	errorResponse,
 	successResponse,
 	successResponseBody,
@@ -184,6 +185,23 @@ app.get("/search", (req: Request, res: Response) => {
 
 	res.status(200);
 	res.send(`searching for ${q}`);
+});
+
+// get all stuff in DB
+app.get("/api/stuff", async (req: Request, res: Response) => {
+	const username = req.body;
+	console.log("username", username);
+
+	try {
+		const stuff = await db.select().from(stuffTable);
+		if (stuff.length < 1) {
+			return res.status(404).json(errorResponse("Data not found"));
+		}
+		res.status(200).json(successResponseBody(stuff));
+	} catch (error) {
+		console.error(error);
+		return res.status(500).json(errorResponse(JSON.stringify(error)));
+	}
 });
 
 app.listen(port, () => {
