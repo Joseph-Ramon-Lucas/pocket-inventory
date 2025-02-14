@@ -9,7 +9,6 @@ import { db } from "./db";
 import { eq } from "drizzle-orm";
 import { stuffTable, usersTable } from "./db/schema";
 import {
-	errorMessage,
 	errorResponse,
 	successResponse,
 	successResponseBody,
@@ -17,7 +16,8 @@ import {
 	type RequestResult,
 	type UserCredentials,
 	type StuffDto,
-	StuffDtoSchema,
+	type StuffDtoPost,
+	StuffDtoPostSchema,
 } from "./types";
 
 // salts for password
@@ -40,10 +40,10 @@ function verifyCredentialLength(inputData: UserCredentials): RequestResult {
 	return successResponse();
 }
 
-function verifyStuffBody(inputData: StuffDto): RequestResult {
-	const parseResult = StuffDtoSchema.safeParse(inputData);
+function verifyStuffBodyPost(inputData: StuffDtoPost): RequestResult {
+	const parseResult = StuffDtoPostSchema.safeParse(inputData);
 	if (!parseResult.success) {
-		return errorResponse("Improper Stuff Body");
+		return errorResponse(JSON.stringify(parseResult.error));
 	}
 	return successResponse();
 }
@@ -198,11 +198,11 @@ app.get("/search", (req: Request, res: Response) => {
 
 // get all stuff in DB
 app.get("/api/stuff", async (req: Request, res: Response) => {
-	const username = req.body;
+	const username: { username: string } = req.body; // TODO only get items from this user but composite keys in drizzle is broken rn
 	console.log("username", username);
 
 	try {
-		const stuff = await db.select().from(stuffTable);
+		const stuff: StuffDto[] = await db.select().from(stuffTable);
 		if (stuff.length < 1 || stuff === null) {
 			return res.status(404).json(errorResponse("Data not found"));
 		}
@@ -216,7 +216,7 @@ app.get("/api/stuff", async (req: Request, res: Response) => {
 app.get("/api/stuff/:itemId", async (req: Request, res: Response) => {
 	try {
 		const itemId: number = Number.parseInt(req.params.itemId);
-		const stuff = await db
+		const stuff: StuffDto[] = await db
 			.select()
 			.from(stuffTable)
 			.where(eq(stuffTable.itemId, itemId))
@@ -234,16 +234,22 @@ app.get("/api/stuff/:itemId", async (req: Request, res: Response) => {
 // add an item to DB
 app.post("/api/stuff", async (req: Request, res: Response) => {
 	try {
-		const itemToAdd = req.body;
+		const itemToAdd: StuffDtoPost = req.body;
 		console.log(itemToAdd);
+		const verifyCheck: RequestResult = verifyStuffBodyPost(itemToAdd);
+		if (!verifyCheck.success) {
+			return res
+				.status(400)
+				.json(errorResponse(JSON.stringify(verifyCheck.errorMessage)));
+		}
 
-		if (itemToAdd.length < 1 || itemToAdd.itemName === null) {
+		if (itemToAdd.itemName === null) {
 			return res
 				.status(400)
 				.json(errorResponse("Body missing itemId or itemName"));
 		}
 		// check for duplicate item Name
-		const result = await db
+		const result: StuffDto[] = await db
 			.select()
 			.from(stuffTable)
 			.where(eq(stuffTable.itemName, itemToAdd.itemName));
@@ -256,7 +262,7 @@ app.post("/api/stuff", async (req: Request, res: Response) => {
 		}
 		// insert into db
 		await db.insert(stuffTable).values(itemToAdd);
-		return res.status(201).json(successResponse);
+		return res.status(201).json(successResponse());
 	} catch (error) {
 		console.error(error);
 		return res.status(500).json(errorResponse(JSON.stringify(error)));
@@ -267,7 +273,7 @@ app.post("/api/stuff", async (req: Request, res: Response) => {
 app.delete("/api/stuff/:itemId", async (req: Request, res: Response) => {
 	try {
 		const itemToDelete: number = Number.parseInt(req.params.itemId);
-		const result = await db
+		const result: StuffDto[] = await db
 			.delete(stuffTable)
 			.where(eq(stuffTable.itemId, itemToDelete))
 			.returning();

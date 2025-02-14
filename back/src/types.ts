@@ -8,14 +8,22 @@ export const userCredentialSchema = z.object({
 export const StuffDtoSchema = z.object({
 	itemId: z.number().positive(),
 	itemName: z.string().nonempty(),
-	quantity: z.number().positive(),
-	itemType: z.string(),
-	itemValue: z.number().multipleOf(0.01),
-	location: z.string(),
+	quantity: z.number().positive().nullable(),
+	itemType: z.string().nullable(),
+	itemValue: z.number().multipleOf(0.01).nullable(),
+	location: z.string().nullable(),
+});
+export const StuffDtoPostSchema = z.object({
+	itemName: z.string().nonempty(),
+	quantity: z.number().positive().nullable(),
+	itemType: z.string().nullable(),
+	itemValue: z.number().multipleOf(0.01).nullable(),
+	location: z.string().nullable(),
 });
 
 export type UserCredentials = z.infer<typeof userCredentialSchema>;
 export type StuffDto = z.infer<typeof StuffDtoSchema>;
+export type StuffDtoPost = z.infer<typeof StuffDtoPostSchema>;
 
 export type errorMessage = string;
 
