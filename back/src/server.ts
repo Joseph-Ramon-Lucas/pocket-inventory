@@ -16,8 +16,9 @@ import {
 	userCredentialSchema,
 	type RequestResult,
 	type UserCredentials,
+	type StuffDto,
+	StuffDtoSchema,
 } from "./types";
-import { isValid, z } from "zod";
 
 // salts for password
 const saltRounds = 10;
@@ -35,6 +36,14 @@ function verifyCredentialLength(inputData: UserCredentials): RequestResult {
 	if (!parseResult.success) {
 		// console.log(parseResult, "this is the parse result");
 		return errorResponse("Incorrect inputs when logging in");
+	}
+	return successResponse();
+}
+
+function verifyStuffBody(inputData: StuffDto): RequestResult {
+	const parseResult = StuffDtoSchema.safeParse(inputData);
+	if (!parseResult.success) {
+		return errorResponse("Improper Stuff Body");
 	}
 	return successResponse();
 }
@@ -206,7 +215,7 @@ app.get("/api/stuff", async (req: Request, res: Response) => {
 // get specific item in DB
 app.get("/api/stuff/:itemId", async (req: Request, res: Response) => {
 	try {
-		const itemId = Number.parseInt(req.params.itemId);
+		const itemId: number = Number.parseInt(req.params.itemId);
 		const stuff = await db
 			.select()
 			.from(stuffTable)
@@ -228,11 +237,7 @@ app.post("/api/stuff", async (req: Request, res: Response) => {
 		const itemToAdd = req.body;
 		console.log(itemToAdd);
 
-		if (
-			itemToAdd.length < 1 ||
-			itemToAdd.itemId === null ||
-			itemToAdd.itemName === null
-		) {
+		if (itemToAdd.length < 1 || itemToAdd.itemName === null) {
 			return res
 				.status(400)
 				.json(errorResponse("Body missing itemId or itemName"));
@@ -252,6 +257,26 @@ app.post("/api/stuff", async (req: Request, res: Response) => {
 		// insert into db
 		await db.insert(stuffTable).values(itemToAdd);
 		return res.status(201).json(successResponse);
+	} catch (error) {
+		console.error(error);
+		return res.status(500).json(errorResponse(JSON.stringify(error)));
+	}
+});
+
+// delete item in db
+app.delete("/api/stuff/:itemId", async (req: Request, res: Response) => {
+	try {
+		const itemToDelete: number = Number.parseInt(req.params.itemId);
+		const result = await db
+			.delete(stuffTable)
+			.where(eq(stuffTable.itemId, itemToDelete))
+			.returning();
+		if (result.length < 1) {
+			return res
+				.status(404)
+				.json(errorResponse(`Cannot find item id ${itemToDelete} to delete`));
+		}
+		return res.status(204).json(successResponse());
 	} catch (error) {
 		console.error(error);
 		return res.status(500).json(errorResponse(JSON.stringify(error)));

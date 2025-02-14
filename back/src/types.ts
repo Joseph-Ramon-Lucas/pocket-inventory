@@ -1,11 +1,21 @@
-import { z } from "zod";
+import { number, z, ZodObject } from "zod";
 
 export const userCredentialSchema = z.object({
 	username: z.string().min(3).max(25),
 	password: z.string().min(8).max(30),
 });
 
+export const StuffDtoSchema = z.object({
+	itemId: z.number().positive(),
+	itemName: z.string().nonempty(),
+	quantity: z.number().positive(),
+	itemType: z.string(),
+	itemValue: z.number().multipleOf(0.01),
+	location: z.string(),
+});
+
 export type UserCredentials = z.infer<typeof userCredentialSchema>;
+export type StuffDto = z.infer<typeof StuffDtoSchema>;
 
 export type errorMessage = string;
 
