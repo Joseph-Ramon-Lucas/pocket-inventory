@@ -18,6 +18,7 @@ import {
 	type StuffDto,
 	type StuffDtoPost,
 	StuffDtoPostSchema,
+	SuccessResult,
 } from "./types";
 
 // salts for password
@@ -283,6 +284,33 @@ app.delete("/api/stuff/:itemId", async (req: Request, res: Response) => {
 				.json(errorResponse(`Cannot find item id ${itemToDelete} to delete`));
 		}
 		return res.status(204).json(successResponse());
+	} catch (error) {
+		console.error(error);
+		return res.status(500).json(errorResponse(JSON.stringify(error)));
+	}
+});
+
+// edit whole item
+app.put("/api/stuff/:itemId", async (req: Request, res: Response) => {
+	try {
+		const itemToEdit = Number.parseInt(req.params.itemId);
+		const verifyCheck: RequestResult = verifyStuffBodyPost(req.body);
+		if (!verifyCheck.success) {
+			return res
+				.status(400)
+				.json(errorResponse(JSON.stringify(verifyCheck.errorMessage)));
+		}
+
+		const result: StuffDto[] = await db
+			.update(stuffTable)
+			.set(req.body)
+			.where(eq(stuffTable.itemId, itemToEdit))
+			.returning();
+
+		if (result.length < 1 || result === null) {
+			return res.status(404).json(errorResponse("Data not found"));
+		}
+		return res.status(201).json(successResponseBody(result));
 	} catch (error) {
 		console.error(error);
 		return res.status(500).json(errorResponse(JSON.stringify(error)));
