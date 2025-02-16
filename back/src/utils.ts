@@ -1,4 +1,13 @@
-import { promise, type z } from "zod";
+import { promise, SafeParseError, type z } from "zod";
+import {
+	errorResponse,
+	type RequestResult,
+	type StuffDtoInterface,
+	StuffDtoInterfaceSchema,
+	successResponse,
+	type UserCredentials,
+	userCredentialSchema,
+} from "./types";
 
 // if parsing fails, will return a list of string error messages
 export function parseError(zodError: z.ZodError): string[] {
@@ -13,6 +22,35 @@ export function parseError(zodError: z.ZodError): string[] {
 			([property, message]) => `"${property}": ${message}`,
 		),
 	];
+}
+
+export function verifyCredentialLength(
+	inputData: UserCredentials,
+): RequestResult {
+	const parseResult: z.SafeParseReturnType<UserCredentials, UserCredentials> =
+		userCredentialSchema.safeParse(inputData);
+	if (!parseResult.success) {
+		const zodErrors: string = "".concat(...parseError(parseResult.error));
+		console.log(zodErrors);
+		return errorResponse(zodErrors);
+	}
+	return successResponse();
+}
+
+export function verifyStuffBodyInterface(
+	inputData: StuffDtoInterface,
+): RequestResult {
+	const parseResult: z.SafeParseReturnType<
+		StuffDtoInterface,
+		StuffDtoInterface
+	> = StuffDtoInterfaceSchema.safeParse(inputData);
+	if (!parseResult.success) {
+		const zodErrors: string = "".concat(...parseError(parseResult.error));
+		console.log(zodErrors);
+
+		return errorResponse(zodErrors);
+	}
+	return successResponse();
 }
 
 // // Timer Promise

@@ -20,6 +20,7 @@ import {
 	StuffDtoInterfaceSchema,
 	SuccessResult,
 } from "./types";
+import { verifyCredentialLength, verifyStuffBodyInterface } from "./utils";
 
 // salts for password
 const saltRounds = 10;
@@ -31,23 +32,6 @@ const port = 3000;
 app.use(express.static("public"));
 //parse req.body in json
 app.use(json());
-
-function verifyCredentialLength(inputData: UserCredentials): RequestResult {
-	const parseResult = userCredentialSchema.safeParse(inputData);
-	if (!parseResult.success) {
-		// console.log(parseResult, "this is the parse result");
-		return errorResponse("Incorrect inputs when logging in");
-	}
-	return successResponse();
-}
-
-function verifyStuffBodyInterface(inputData: StuffDtoInterface): RequestResult {
-	const parseResult = StuffDtoInterfaceSchema.safeParse(inputData);
-	if (!parseResult.success) {
-		return errorResponse(JSON.stringify(parseResult.error));
-	}
-	return successResponse();
-}
 
 app.get("/api/", (req: Request, res: Response) => {
 	console.log("oi");
@@ -245,9 +229,7 @@ app.post("/api/stuff", async (req: Request, res: Response) => {
 		}
 
 		if (itemToAdd.itemName === null) {
-			return res
-				.status(400)
-				.json(errorResponse("Body missing itemId or itemName"));
+			return res.status(400).json(errorResponse("Body itemName"));
 		}
 		// check for duplicate item Name
 		const result: StuffDto[] = await db
@@ -293,7 +275,7 @@ app.delete("/api/stuff/:itemId", async (req: Request, res: Response) => {
 // edit whole item
 app.put("/api/stuff/:itemId", async (req: Request, res: Response) => {
 	try {
-		const itemToEdit = Number.parseInt(req.params.itemId);
+		const itemToEdit: number = Number.parseInt(req.params.itemId);
 		const verifyCheck: RequestResult = verifyStuffBodyInterface(req.body);
 		if (!verifyCheck.success) {
 			return res
