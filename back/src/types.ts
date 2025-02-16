@@ -13,7 +13,7 @@ export const StuffDtoSchema = z.object({
 	itemValue: z.number().multipleOf(0.01).nullable(),
 	location: z.string().nullable(),
 });
-export const StuffDtoPostSchema = z.object({
+export const StuffDtoInterfaceSchema = z.object({
 	itemName: z.string().nonempty(),
 	quantity: z.number().positive().nullable(),
 	itemType: z.string().nullable(),
@@ -23,7 +23,7 @@ export const StuffDtoPostSchema = z.object({
 
 export type UserCredentials = z.infer<typeof userCredentialSchema>;
 export type StuffDto = z.infer<typeof StuffDtoSchema>;
-export type StuffDtoPost = z.infer<typeof StuffDtoPostSchema>;
+export type StuffDtoInterface = z.infer<typeof StuffDtoInterfaceSchema>;
 
 export type errorMessage = string;
 

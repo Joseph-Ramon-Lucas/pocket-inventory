@@ -16,8 +16,8 @@ import {
 	type RequestResult,
 	type UserCredentials,
 	type StuffDto,
-	type StuffDtoPost,
-	StuffDtoPostSchema,
+	type StuffDtoInterface,
+	StuffDtoInterfaceSchema,
 	SuccessResult,
 } from "./types";
 
@@ -41,8 +41,8 @@ function verifyCredentialLength(inputData: UserCredentials): RequestResult {
 	return successResponse();
 }
 
-function verifyStuffBodyPost(inputData: StuffDtoPost): RequestResult {
-	const parseResult = StuffDtoPostSchema.safeParse(inputData);
+function verifyStuffBodyInterface(inputData: StuffDtoInterface): RequestResult {
+	const parseResult = StuffDtoInterfaceSchema.safeParse(inputData);
 	if (!parseResult.success) {
 		return errorResponse(JSON.stringify(parseResult.error));
 	}
@@ -235,9 +235,9 @@ app.get("/api/stuff/:itemId", async (req: Request, res: Response) => {
 // add an item to DB
 app.post("/api/stuff", async (req: Request, res: Response) => {
 	try {
-		const itemToAdd: StuffDtoPost = req.body;
+		const itemToAdd: StuffDtoInterface = req.body;
 		console.log(itemToAdd);
-		const verifyCheck: RequestResult = verifyStuffBodyPost(itemToAdd);
+		const verifyCheck: RequestResult = verifyStuffBodyInterface(itemToAdd);
 		if (!verifyCheck.success) {
 			return res
 				.status(400)
@@ -294,7 +294,7 @@ app.delete("/api/stuff/:itemId", async (req: Request, res: Response) => {
 app.put("/api/stuff/:itemId", async (req: Request, res: Response) => {
 	try {
 		const itemToEdit = Number.parseInt(req.params.itemId);
-		const verifyCheck: RequestResult = verifyStuffBodyPost(req.body);
+		const verifyCheck: RequestResult = verifyStuffBodyInterface(req.body);
 		if (!verifyCheck.success) {
 			return res
 				.status(400)
