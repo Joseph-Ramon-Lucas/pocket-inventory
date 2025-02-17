@@ -282,9 +282,16 @@ app.post("/api/stuff", async (req: Request, res: Response) => {
 			})
 			.from(usersTable)
 			.where(eq(usersTable.username, username));
+		if (!validUser) {
+			return res.status(404).json(errorResponse(`Can't find user ${username}`));
+		}
 		// check for duplicate item Name
-		const dupCheck = await db
-			.select()
+		const dupCheck: {
+			itemId: number | null;
+		}[] = await db
+			.select({
+				itemId: usersOwnStuffTable.itemId,
+			})
 			.from(stuffTable)
 			.fullJoin(
 				usersOwnStuffTable,
@@ -293,7 +300,6 @@ app.post("/api/stuff", async (req: Request, res: Response) => {
 			.where(
 				and(
 					eq(usersOwnStuffTable.ownerId, validUser[0].userId),
-
 					eq(stuffTable.itemName, itemToAdd.itemName),
 				),
 			);
@@ -329,7 +335,39 @@ app.post("/api/stuff", async (req: Request, res: Response) => {
 // delete item in db
 app.delete("/api/stuff/:itemId", async (req: Request, res: Response) => {
 	try {
+		const username: string = req.query.username as string;
+		console.log("username", username);
+		if (!username) {
+			return res
+				.status(404)
+				.json(errorResponse("Must provide a username as a query"));
+		}
+		// check for valid username
+		const validUser: {
+			userId: number;
+			username: string;
+		}[] = await db
+			.select({
+				userId: usersTable.userId,
+				username: usersTable.username,
+			})
+			.from(usersTable)
+			.where(eq(usersTable.username, username));
+		if (!validUser) {
+			return res.status(404).json(errorResponse(`Can't find user ${username}`));
+		}
+
 		const itemToDelete: number = Number.parseInt(req.params.itemId);
+		//remove from junction
+		await db
+			.delete(usersOwnStuffTable)
+			.where(
+				and(
+					eq(usersOwnStuffTable.itemId, itemToDelete),
+					eq(usersOwnStuffTable.ownerId, validUser[0].userId),
+				),
+			);
+		//remove from stuff
 		const result: StuffDto[] = await db
 			.delete(stuffTable)
 			.where(eq(stuffTable.itemId, itemToDelete))
