@@ -6,8 +6,8 @@ import express, {
 } from "express";
 import bcrypt from "bcrypt";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
-import { stuffTable, usersTable } from "./db/schema";
+import { eq, sql } from "drizzle-orm";
+import { stuffTable, usersOwnStuffTable, usersTable } from "./db/schema";
 import {
 	errorResponse,
 	successResponse,
@@ -19,6 +19,7 @@ import {
 	type StuffDtoInterface,
 	StuffDtoInterfaceSchema,
 	SuccessResult,
+	StuffDtoSchema,
 } from "./types";
 import { verifyCredentialLength, verifyStuffBodyInterface } from "./utils";
 
@@ -183,12 +184,24 @@ app.get("/search", (req: Request, res: Response) => {
 
 // get all stuff in DB
 app.get("/api/stuff", async (req: Request, res: Response) => {
-	const username: { username: string } = req.body; // TODO only get items from this user but composite keys in drizzle is broken rn
-	console.log("username", username);
-
 	try {
-		const stuff: StuffDto[] = await db.select().from(stuffTable);
-		if (stuff.length < 1 || stuff === null) {
+		const username: { username: string } = req.body; // TODO only get items from this user but composite keys in drizzle is broken rn
+		console.log("username", username);
+
+		const stuff = await db
+			.select({
+				itemId: stuffTable.itemId,
+				itemName: stuffTable.itemName,
+				quantity: stuffTable.quantity,
+				itemType: stuffTable.itemType,
+				itemValue: stuffTable.itemValue,
+				location: stuffTable.location,
+			})
+			.from(usersOwnStuffTable)
+			.fullJoin(usersTable, eq(usersTable.userId, usersOwnStuffTable.ownerId))
+			.fullJoin(stuffTable, eq(stuffTable.itemId, usersOwnStuffTable.itemId))
+			.where(eq(usersTable.username, username.username));
+		if (stuff === null) {
 			return res.status(404).json(errorResponse("Data not found"));
 		}
 		return res.status(200).json(successResponseBody(stuff));

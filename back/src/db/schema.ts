@@ -1,5 +1,11 @@
-import { integer, primaryKey, real, serial, text } from "drizzle-orm/pg-core";
-import { pgTable } from "drizzle-orm/pg-core";
+import {
+	integer,
+	pgTable,
+	primaryKey,
+	real,
+	serial,
+	text,
+} from "drizzle-orm/pg-core";
 
 export const usersTable = pgTable("users", {
 	userId: serial("userid").primaryKey(),
@@ -16,12 +22,12 @@ export const stuffTable = pgTable("stuff", {
 	location: text("location"),
 });
 
-// export const usersOwnStuffTable = pgTable(
-// 	"usersOwnStuff",
-// 	{
-// 		ownerId: serial("ownerid").notNull(),
-// 		itemId: serial("itemid").notNull(),
-// 	},
-// 	(table) => [primaryKey({ columns: [table.ownerId, table.itemId] })],
-// );
+export const usersOwnStuffTable = pgTable("usersownstuff", {
+	ownerId: serial("ownerid")
+		.notNull()
+		.references(() => usersTable.userId),
+	itemId: serial("itemid")
+		.notNull()
+		.references(() => stuffTable.itemId),
+});
 // Drizzle composite primary keys have a bug stopping them from working
