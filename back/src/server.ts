@@ -6,22 +6,18 @@ import express, {
 } from "express";
 import bcrypt from "bcrypt";
 import { db } from "./db";
-import { eq, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { stuffTable, usersOwnStuffTable, usersTable } from "./db/schema";
 import {
 	errorResponse,
 	successResponse,
 	successResponseBody,
-	userCredentialSchema,
 	type RequestResult,
 	type UserCredentials,
 	type StuffDto,
-	type StuffDtoInterface,
-	StuffDtoInterfaceSchema,
-	SuccessResult,
-	StuffDtoSchema,
+	type StuffDtoInsert,
 } from "./types";
-import { verifyCredentialLength, verifyStuffBodyInterface } from "./utils";
+import { verifyCredentialLength, verifyStuffBodyInsert } from "./utils";
 
 // salts for password
 const saltRounds = 10;
@@ -185,10 +181,15 @@ app.get("/search", (req: Request, res: Response) => {
 // get all stuff in DB
 app.get("/api/stuff", async (req: Request, res: Response) => {
 	try {
-		const username: { username: string } = req.body; // TODO only get items from this user but composite keys in drizzle is broken rn
+		const username: string = req.query.username as string;
 		console.log("username", username);
+		if (!username) {
+			return res
+				.status(404)
+				.json(errorResponse("Must provide a username as a query"));
+		}
 
-		const stuff = await db
+		const stuff: StuffDto[] = (await db
 			.select({
 				itemId: stuffTable.itemId,
 				itemName: stuffTable.itemName,
@@ -200,8 +201,9 @@ app.get("/api/stuff", async (req: Request, res: Response) => {
 			.from(usersOwnStuffTable)
 			.fullJoin(usersTable, eq(usersTable.userId, usersOwnStuffTable.ownerId))
 			.fullJoin(stuffTable, eq(stuffTable.itemId, usersOwnStuffTable.itemId))
-			.where(eq(usersTable.username, username.username));
-		if (stuff === null) {
+			.where(eq(usersTable.username, username))) as StuffDto[];
+
+		if (stuff.length === 0) {
 			return res.status(404).json(errorResponse("Data not found"));
 		}
 		return res.status(200).json(successResponseBody(stuff));
@@ -213,12 +215,30 @@ app.get("/api/stuff", async (req: Request, res: Response) => {
 // get specific item in DB
 app.get("/api/stuff/:itemId", async (req: Request, res: Response) => {
 	try {
+		const username: string = req.query.username as string;
+		console.log("username", username);
+		if (!username) {
+			return res
+				.status(404)
+				.json(errorResponse("Must provide a username as a query"));
+		}
 		const itemId: number = Number.parseInt(req.params.itemId);
-		const stuff: StuffDto[] = await db
-			.select()
-			.from(stuffTable)
-			.where(eq(stuffTable.itemId, itemId))
-			.limit(1);
+		const stuff: StuffDto[] = (await db
+			.select({
+				itemId: stuffTable.itemId,
+				itemName: stuffTable.itemName,
+				quantity: stuffTable.quantity,
+				itemType: stuffTable.itemType,
+				itemValue: stuffTable.itemValue,
+				location: stuffTable.location,
+			})
+			.from(usersOwnStuffTable)
+			.fullJoin(usersTable, eq(usersTable.userId, usersOwnStuffTable.ownerId))
+			.fullJoin(stuffTable, eq(stuffTable.itemId, usersOwnStuffTable.itemId))
+			.where(
+				and(eq(usersTable.username, username), eq(stuffTable.itemId, itemId)),
+			)
+			.limit(1)) as StuffDto[];
 		if (stuff.length < 1 || stuff === null) {
 			return res.status(404).json(errorResponse("Data not found"));
 		}
@@ -232,9 +252,16 @@ app.get("/api/stuff/:itemId", async (req: Request, res: Response) => {
 // add an item to DB
 app.post("/api/stuff", async (req: Request, res: Response) => {
 	try {
-		const itemToAdd: StuffDtoInterface = req.body;
+		const username: string = req.query.username as string;
+		console.log("username", username);
+		if (!username) {
+			return res
+				.status(404)
+				.json(errorResponse("Must provide a username as a query"));
+		}
+		const itemToAdd: StuffDtoInsert = req.body;
 		console.log(itemToAdd);
-		const verifyCheck: RequestResult = verifyStuffBodyInterface(itemToAdd);
+		const verifyCheck: RequestResult = verifyStuffBodyInsert(itemToAdd);
 		if (!verifyCheck.success) {
 			return res
 				.status(400)
@@ -244,20 +271,54 @@ app.post("/api/stuff", async (req: Request, res: Response) => {
 		if (itemToAdd.itemName === null) {
 			return res.status(400).json(errorResponse("Body itemName"));
 		}
+		// check for valid username
+		const validUser: {
+			userId: number;
+			username: string;
+		}[] = await db
+			.select({
+				userId: usersTable.userId,
+				username: usersTable.username,
+			})
+			.from(usersTable)
+			.where(eq(usersTable.username, username));
 		// check for duplicate item Name
-		const result: StuffDto[] = await db
+		const dupCheck = await db
 			.select()
 			.from(stuffTable)
-			.where(eq(stuffTable.itemName, itemToAdd.itemName));
+			.fullJoin(
+				usersOwnStuffTable,
+				eq(stuffTable.itemId, usersOwnStuffTable.itemId),
+			)
+			.where(
+				and(
+					eq(usersOwnStuffTable.ownerId, validUser[0].userId),
 
-		console.log("RESULT:", result, "length:", result.length);
-		if (result.length > 0) {
+					eq(stuffTable.itemName, itemToAdd.itemName),
+				),
+			);
+
+		console.log("RESULT:", dupCheck, "length:", dupCheck.length);
+		if (dupCheck.length > 0) {
 			return res
 				.status(409)
 				.json(errorResponse(`Item Name ${itemToAdd.itemName} already exists`));
 		}
-		// insert into db
-		await db.insert(stuffTable).values(itemToAdd);
+
+		// insert item into db
+		const insertedItem: StuffDto[] = await db
+			.insert(stuffTable)
+			.values(itemToAdd)
+			.returning();
+		console.log("INSERTED", insertedItem);
+		const junctionToInsert: { ownerId: number; itemId: number } = {
+			ownerId: validUser[0].userId,
+			itemId: insertedItem[0].itemId,
+		};
+
+		// update junction table with new item
+		await db.insert(usersOwnStuffTable).values(junctionToInsert);
+
 		return res.status(201).json(successResponse());
 	} catch (error) {
 		console.error(error);
@@ -289,7 +350,7 @@ app.delete("/api/stuff/:itemId", async (req: Request, res: Response) => {
 app.put("/api/stuff/:itemId", async (req: Request, res: Response) => {
 	try {
 		const itemToEdit: number = Number.parseInt(req.params.itemId);
-		const verifyCheck: RequestResult = verifyStuffBodyInterface(req.body);
+		const verifyCheck: RequestResult = verifyStuffBodyInsert(req.body);
 		if (!verifyCheck.success) {
 			return res
 				.status(400)

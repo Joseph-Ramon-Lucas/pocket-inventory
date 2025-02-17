@@ -8,14 +8,14 @@ export const userCredentialSchema = z.object({
 export const StuffDtoSchema = z.object({
 	itemId: z.number().positive(),
 	itemName: z.string().nonempty(),
-	quantity: z.number().positive().nullable(),
+	quantity: z.number().nonnegative().nullable(),
 	itemType: z.string().nullable(),
 	itemValue: z.number().multipleOf(0.01).nullable(),
 	location: z.string().nullable(),
 });
-export const StuffDtoInterfaceSchema = z.object({
+export const StuffDtoInsertSchema = z.object({
 	itemName: z.string().nonempty(),
-	quantity: z.number().positive().nullable(),
+	quantity: z.number().nonnegative().nullable(),
 	itemType: z.string().nullable(),
 	itemValue: z.number().multipleOf(0.01).nullable(),
 	location: z.string().nullable(),
@@ -23,7 +23,7 @@ export const StuffDtoInterfaceSchema = z.object({
 
 export type UserCredentials = z.infer<typeof userCredentialSchema>;
 export type StuffDto = z.infer<typeof StuffDtoSchema>;
-export type StuffDtoInterface = z.infer<typeof StuffDtoInterfaceSchema>;
+export type StuffDtoInsert = z.infer<typeof StuffDtoInsertSchema>;
 
 export type errorMessage = string;
 

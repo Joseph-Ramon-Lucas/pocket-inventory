@@ -2,8 +2,8 @@ import { promise, SafeParseError, type z } from "zod";
 import {
 	errorResponse,
 	type RequestResult,
-	type StuffDtoInterface,
-	StuffDtoInterfaceSchema,
+	type StuffDtoInsert,
+	StuffDtoInsertSchema,
 	successResponse,
 	type UserCredentials,
 	userCredentialSchema,
@@ -37,13 +37,11 @@ export function verifyCredentialLength(
 	return successResponse();
 }
 
-export function verifyStuffBodyInterface(
-	inputData: StuffDtoInterface,
+export function verifyStuffBodyInsert(
+	inputData: StuffDtoInsert,
 ): RequestResult {
-	const parseResult: z.SafeParseReturnType<
-		StuffDtoInterface,
-		StuffDtoInterface
-	> = StuffDtoInterfaceSchema.safeParse(inputData);
+	const parseResult: z.SafeParseReturnType<StuffDtoInsert, StuffDtoInsert> =
+		StuffDtoInsertSchema.safeParse(inputData);
 	if (!parseResult.success) {
 		const zodErrors: string = "".concat(...parseError(parseResult.error));
 		console.log(zodErrors);
