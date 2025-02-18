@@ -60,7 +60,7 @@ export function verifyStuffBodyInsert(
 export async function verifyUsername(
 	username: string,
 ): Promise<RequestResultBody<ValidUser[]>> {
-	const validUser: ValidUser[] = await db
+	const validUser: ValidUser[] | null = await db
 		.select({
 			userId: usersTable.userId,
 			username: usersTable.username,
@@ -68,7 +68,7 @@ export async function verifyUsername(
 		.from(usersTable)
 		.where(eq(usersTable.username, username))
 		.limit(1);
-	if (!validUser) {
+	if (validUser.length < 1) {
 		return errorResponse(`Can't find user ${username}`);
 	}
 	return successResponseBody(validUser);

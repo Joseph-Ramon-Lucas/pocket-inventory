@@ -195,9 +195,10 @@ app.get("/api/stuff", async (req: Request, res: Response) => {
 	try {
 		const username: string = req.query.username as string;
 		console.log("username", username);
+
 		if (!username) {
 			return res
-				.status(404)
+				.status(400)
 				.json(errorResponse("Must provide a username as a query"));
 		}
 
@@ -215,7 +216,7 @@ app.get("/api/stuff", async (req: Request, res: Response) => {
 			.innerJoin(stuffTable, eq(stuffTable.itemId, usersOwnStuffTable.itemId))
 			.where(eq(usersTable.username, username))) as StuffDto[];
 
-		if (stuff.length === 0) {
+		if (stuff.length < 1) {
 			return res.status(404).json(errorResponse("Data not found"));
 		}
 		return res.status(200).json(successResponseBody(stuff));
@@ -228,13 +229,20 @@ app.get("/api/stuff", async (req: Request, res: Response) => {
 app.get("/api/stuff/:itemId", async (req: Request, res: Response) => {
 	try {
 		const username: string = req.query.username as string;
+		const itemIdToGet: number = Number.parseInt(req.params.itemId);
 		console.log("username", username);
+
 		if (!username) {
 			return res
-				.status(404)
+				.status(400)
 				.json(errorResponse("Must provide a username as a query"));
 		}
-		const itemId: number = Number.parseInt(req.params.itemId);
+		if (!itemIdToGet) {
+			return res
+				.status(400)
+				.json(errorResponse("Must provide an itemId as parameter to the url"));
+		}
+
 		const stuff: StuffDto[] = (await db
 			.select({
 				itemId: stuffTable.itemId,
@@ -248,10 +256,13 @@ app.get("/api/stuff/:itemId", async (req: Request, res: Response) => {
 			.innerJoin(usersTable, eq(usersTable.userId, usersOwnStuffTable.ownerId))
 			.innerJoin(stuffTable, eq(stuffTable.itemId, usersOwnStuffTable.itemId))
 			.where(
-				and(eq(usersTable.username, username), eq(stuffTable.itemId, itemId)),
+				and(
+					eq(usersTable.username, username),
+					eq(stuffTable.itemId, itemIdToGet),
+				),
 			)
 			.limit(1)) as StuffDto[];
-		if (stuff.length < 1 || stuff === null) {
+		if (stuff.length < 1) {
 			return res.status(404).json(errorResponse("Data not found"));
 		}
 		return res.status(200).json(successResponseBody(stuff));
@@ -265,29 +276,30 @@ app.get("/api/stuff/:itemId", async (req: Request, res: Response) => {
 app.post("/api/stuff", async (req: Request, res: Response) => {
 	try {
 		const username: string = req.query.username as string;
+		const idIdToAdd: StuffDtoInsert = req.body;
 		console.log("username", username);
+		console.log(idIdToAdd);
+
 		if (!username) {
 			return res
-				.status(404)
+				.status(400)
 				.json(errorResponse("Must provide a username as a query"));
 		}
-		const itemToAdd: StuffDtoInsert = req.body;
-		console.log(itemToAdd);
-		const verifyCheck: RequestResult = verifyStuffBodyInsert(itemToAdd);
-		if (!verifyCheck.success) {
-			return res
-				.status(400)
-				.json(errorResponse(JSON.stringify(verifyCheck.errorMessage)));
+		if (idIdToAdd.itemName === null) {
+			return res.status(400).json(errorResponse("Body missing itemName"));
 		}
 
-		if (itemToAdd.itemName === null) {
-			return res.status(400).json(errorResponse("Body itemName"));
-		}
-		// check for valid username
+		// validate
 		const validUser: RequestResultBody<ValidUser[]> =
 			await verifyUsername(username);
 		if (!validUser.success) {
 			return res.status(404).json(errorResponse(validUser.errorMessage));
+		}
+		const verifyCheck: RequestResult = verifyStuffBodyInsert(idIdToAdd);
+		if (!verifyCheck.success) {
+			return res
+				.status(400)
+				.json(errorResponse(JSON.stringify(verifyCheck.errorMessage)));
 		}
 		// check for duplicate item Name
 		const dupCheck: {
@@ -304,7 +316,7 @@ app.post("/api/stuff", async (req: Request, res: Response) => {
 			.where(
 				and(
 					eq(usersOwnStuffTable.ownerId, validUser[0].userId),
-					eq(stuffTable.itemName, itemToAdd.itemName),
+					eq(stuffTable.itemName, idIdToAdd.itemName),
 				),
 			);
 
@@ -312,13 +324,13 @@ app.post("/api/stuff", async (req: Request, res: Response) => {
 		if (dupCheck.length > 0) {
 			return res
 				.status(409)
-				.json(errorResponse(`Item Name ${itemToAdd.itemName} already exists`));
+				.json(errorResponse(`Item Name ${idIdToAdd.itemName} already exists`));
 		}
 
 		// insert item into db
 		const insertedItem: StuffDto[] = await db
 			.insert(stuffTable)
-			.values(itemToAdd)
+			.values(idIdToAdd)
 			.returning();
 		console.log("INSERTED", insertedItem);
 		const junctionToInsert: { ownerId: number; itemId: number } = {
@@ -340,38 +352,44 @@ app.post("/api/stuff", async (req: Request, res: Response) => {
 app.delete("/api/stuff/:itemId", async (req: Request, res: Response) => {
 	try {
 		const username: string = req.query.username as string;
+		const itemIdToDelete: number = Number.parseInt(req.params.itemId);
+
 		console.log("username", username);
 		if (!username) {
 			return res
-				.status(404)
+				.status(400)
 				.json(errorResponse("Must provide a username as a query"));
 		}
-		// check for valid username
+		if (!itemIdToDelete) {
+			return res
+				.status(400)
+				.json(errorResponse("Must provide an itemId as parameter to the url"));
+		}
+		// validate
 		const validUser: RequestResultBody<ValidUser[]> =
 			await verifyUsername(username);
 		if (!validUser.success) {
 			return res.status(404).json(errorResponse(validUser.errorMessage));
 		}
 
-		const itemToDelete: number = Number.parseInt(req.params.itemId);
 		//remove from junction
 		await db
 			.delete(usersOwnStuffTable)
 			.where(
 				and(
-					eq(usersOwnStuffTable.itemId, itemToDelete),
+					eq(usersOwnStuffTable.itemId, itemIdToDelete),
 					eq(usersOwnStuffTable.ownerId, validUser[0].userId),
 				),
 			);
 		//remove from stuff
 		const result: StuffDto[] = await db
 			.delete(stuffTable)
-			.where(eq(stuffTable.itemId, itemToDelete))
+			.where(eq(stuffTable.itemId, itemIdToDelete))
 			.returning();
 		if (result.length < 1) {
 			return res
 				.status(404)
-				.json(errorResponse(`Cannot find item id ${itemToDelete} to delete`));
+				.json(errorResponse(`Cannot find item id ${itemIdToDelete} to delete`));
 		}
 		return res.status(204).json(successResponse());
 	} catch (error) {
@@ -384,20 +402,20 @@ app.delete("/api/stuff/:itemId", async (req: Request, res: Response) => {
 app.put("/api/stuff/:itemId", async (req: Request, res: Response) => {
 	try {
 		const username: string = req.query.username as string;
-		const itemToEdit: number = Number.parseInt(req.params.itemId);
+		const itemIdToEdit: number = Number.parseInt(req.params.itemId);
 
 		console.log("username", username);
 		if (!username) {
 			return res
-				.status(404)
+				.status(400)
 				.json(errorResponse("Must provide a username as a query"));
 		}
-		if (!itemToEdit) {
+		if (!itemIdToEdit) {
 			return res
-				.status(404)
-				.json(errorResponse("Must provide a itemId as parameter to the url"));
+				.status(400)
+				.json(errorResponse("Must provide an itemId as parameter to the url"));
 		}
-		// check for valid username
+		// validation
 		const validUser: RequestResultBody<ValidUser[]> =
 			await verifyUsername(username);
 		if (!validUser.success) {
@@ -410,7 +428,7 @@ app.put("/api/stuff/:itemId", async (req: Request, res: Response) => {
 				.json(errorResponse(JSON.stringify(verifyCheck.errorMessage)));
 		}
 
-		const result = await db
+		const result: StuffDto[] = await db
 			.update(stuffTable)
 			.set(req.body)
 			.from(usersOwnStuffTable)
@@ -419,13 +437,19 @@ app.put("/api/stuff/:itemId", async (req: Request, res: Response) => {
 				and(
 					eq(usersOwnStuffTable.itemId, stuffTable.itemId),
 					eq(usersTable.username, username),
-					eq(stuffTable.itemId, itemToEdit),
+					eq(stuffTable.itemId, itemIdToEdit),
 				),
 			)
+			.returning({
+				itemId: stuffTable.itemId,
+				itemName: stuffTable.itemName,
+				quantity: stuffTable.quantity,
+				itemType: stuffTable.itemType,
+				itemValue: stuffTable.itemValue,
+				location: stuffTable.location,
+			});
 
-			.returning();
-
-		if (result.length < 1 || result === null) {
+		if (result.length < 1) {
 			return res.status(404).json(errorResponse("Data not found"));
 		}
 		return res.status(201).json(successResponseBody(result));
