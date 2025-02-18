@@ -1,13 +1,19 @@
-import { promise, SafeParseError, type z } from "zod";
+import type { z } from "zod";
 import {
 	errorResponse,
 	type RequestResult,
+	type RequestResultBody,
 	type StuffDtoInsert,
 	StuffDtoInsertSchema,
 	successResponse,
+	successResponseBody,
 	type UserCredentials,
 	userCredentialSchema,
+	type ValidUser,
 } from "./types";
+import { eq } from "drizzle-orm";
+import { db } from "./db";
+import { usersTable } from "./db/schema";
 
 // if parsing fails, will return a list of string error messages
 export function parseError(zodError: z.ZodError): string[] {
@@ -49,6 +55,23 @@ export function verifyStuffBodyInsert(
 		return errorResponse(zodErrors);
 	}
 	return successResponse();
+}
+
+export async function verifyUsername(
+	username: string,
+): Promise<RequestResultBody<ValidUser[]>> {
+	const validUser: ValidUser[] = await db
+		.select({
+			userId: usersTable.userId,
+			username: usersTable.username,
+		})
+		.from(usersTable)
+		.where(eq(usersTable.username, username))
+		.limit(1);
+	if (!validUser) {
+		return errorResponse(`Can't find user ${username}`);
+	}
+	return successResponseBody(validUser);
 }
 
 // // Timer Promise

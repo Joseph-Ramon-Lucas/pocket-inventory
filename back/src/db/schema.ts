@@ -1,6 +1,8 @@
+import { and, eq } from "drizzle-orm";
 import {
 	integer,
 	pgTable,
+	pgView,
 	primaryKey,
 	real,
 	serial,
@@ -30,4 +32,11 @@ export const usersOwnStuffTable = pgTable("usersownstuff", {
 		.notNull()
 		.references(() => stuffTable.itemId),
 });
-// Drizzle composite primary keys have a bug stopping them from working
+
+export const ownersView = pgView("ownersview").as((qb) =>
+	qb
+		.select()
+		.from(usersOwnStuffTable)
+		.fullJoin(usersTable, eq(usersTable.userId, usersOwnStuffTable.ownerId))
+		.fullJoin(stuffTable, eq(stuffTable.itemId, usersOwnStuffTable.itemId)),
+);

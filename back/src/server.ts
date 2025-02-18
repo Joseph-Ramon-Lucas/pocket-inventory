@@ -7,7 +7,12 @@ import express, {
 import bcrypt from "bcrypt";
 import { db } from "./db";
 import { and, eq } from "drizzle-orm";
-import { stuffTable, usersOwnStuffTable, usersTable } from "./db/schema";
+import {
+	ownersView,
+	stuffTable,
+	usersOwnStuffTable,
+	usersTable,
+} from "./db/schema";
 import {
 	errorResponse,
 	successResponse,
@@ -16,8 +21,15 @@ import {
 	type UserCredentials,
 	type StuffDto,
 	type StuffDtoInsert,
+	type RequestResultBody,
+	type ValidUser,
+	StuffDtoInsertSchema,
 } from "./types";
-import { verifyCredentialLength, verifyStuffBodyInsert } from "./utils";
+import {
+	verifyCredentialLength,
+	verifyStuffBodyInsert,
+	verifyUsername,
+} from "./utils";
 
 // salts for password
 const saltRounds = 10;
@@ -199,8 +211,8 @@ app.get("/api/stuff", async (req: Request, res: Response) => {
 				location: stuffTable.location,
 			})
 			.from(usersOwnStuffTable)
-			.fullJoin(usersTable, eq(usersTable.userId, usersOwnStuffTable.ownerId))
-			.fullJoin(stuffTable, eq(stuffTable.itemId, usersOwnStuffTable.itemId))
+			.innerJoin(usersTable, eq(usersTable.userId, usersOwnStuffTable.ownerId))
+			.innerJoin(stuffTable, eq(stuffTable.itemId, usersOwnStuffTable.itemId))
 			.where(eq(usersTable.username, username))) as StuffDto[];
 
 		if (stuff.length === 0) {
@@ -233,8 +245,8 @@ app.get("/api/stuff/:itemId", async (req: Request, res: Response) => {
 				location: stuffTable.location,
 			})
 			.from(usersOwnStuffTable)
-			.fullJoin(usersTable, eq(usersTable.userId, usersOwnStuffTable.ownerId))
-			.fullJoin(stuffTable, eq(stuffTable.itemId, usersOwnStuffTable.itemId))
+			.innerJoin(usersTable, eq(usersTable.userId, usersOwnStuffTable.ownerId))
+			.innerJoin(stuffTable, eq(stuffTable.itemId, usersOwnStuffTable.itemId))
 			.where(
 				and(eq(usersTable.username, username), eq(stuffTable.itemId, itemId)),
 			)
@@ -272,18 +284,10 @@ app.post("/api/stuff", async (req: Request, res: Response) => {
 			return res.status(400).json(errorResponse("Body itemName"));
 		}
 		// check for valid username
-		const validUser: {
-			userId: number;
-			username: string;
-		}[] = await db
-			.select({
-				userId: usersTable.userId,
-				username: usersTable.username,
-			})
-			.from(usersTable)
-			.where(eq(usersTable.username, username));
-		if (!validUser) {
-			return res.status(404).json(errorResponse(`Can't find user ${username}`));
+		const validUser: RequestResultBody<ValidUser[]> =
+			await verifyUsername(username);
+		if (!validUser.success) {
+			return res.status(404).json(errorResponse(validUser.errorMessage));
 		}
 		// check for duplicate item Name
 		const dupCheck: {
@@ -293,7 +297,7 @@ app.post("/api/stuff", async (req: Request, res: Response) => {
 				itemId: usersOwnStuffTable.itemId,
 			})
 			.from(stuffTable)
-			.fullJoin(
+			.innerJoin(
 				usersOwnStuffTable,
 				eq(stuffTable.itemId, usersOwnStuffTable.itemId),
 			)
@@ -343,18 +347,10 @@ app.delete("/api/stuff/:itemId", async (req: Request, res: Response) => {
 				.json(errorResponse("Must provide a username as a query"));
 		}
 		// check for valid username
-		const validUser: {
-			userId: number;
-			username: string;
-		}[] = await db
-			.select({
-				userId: usersTable.userId,
-				username: usersTable.username,
-			})
-			.from(usersTable)
-			.where(eq(usersTable.username, username));
-		if (!validUser) {
-			return res.status(404).json(errorResponse(`Can't find user ${username}`));
+		const validUser: RequestResultBody<ValidUser[]> =
+			await verifyUsername(username);
+		if (!validUser.success) {
+			return res.status(404).json(errorResponse(validUser.errorMessage));
 		}
 
 		const itemToDelete: number = Number.parseInt(req.params.itemId);
@@ -387,7 +383,26 @@ app.delete("/api/stuff/:itemId", async (req: Request, res: Response) => {
 // edit whole item
 app.put("/api/stuff/:itemId", async (req: Request, res: Response) => {
 	try {
+		const username: string = req.query.username as string;
 		const itemToEdit: number = Number.parseInt(req.params.itemId);
+
+		console.log("username", username);
+		if (!username) {
+			return res
+				.status(404)
+				.json(errorResponse("Must provide a username as a query"));
+		}
+		if (!itemToEdit) {
+			return res
+				.status(404)
+				.json(errorResponse("Must provide a itemId as parameter to the url"));
+		}
+		// check for valid username
+		const validUser: RequestResultBody<ValidUser[]> =
+			await verifyUsername(username);
+		if (!validUser.success) {
+			return res.status(404).json(errorResponse(validUser.errorMessage));
+		}
 		const verifyCheck: RequestResult = verifyStuffBodyInsert(req.body);
 		if (!verifyCheck.success) {
 			return res
@@ -395,10 +410,19 @@ app.put("/api/stuff/:itemId", async (req: Request, res: Response) => {
 				.json(errorResponse(JSON.stringify(verifyCheck.errorMessage)));
 		}
 
-		const result: StuffDto[] = await db
+		const result = await db
 			.update(stuffTable)
 			.set(req.body)
-			.where(eq(stuffTable.itemId, itemToEdit))
+			.from(usersOwnStuffTable)
+			.innerJoin(usersTable, eq(usersOwnStuffTable.ownerId, usersTable.userId))
+			.where(
+				and(
+					eq(usersOwnStuffTable.itemId, stuffTable.itemId),
+					eq(usersTable.username, username),
+					eq(stuffTable.itemId, itemToEdit),
+				),
+			)
+
 			.returning();
 
 		if (result.length < 1 || result === null) {

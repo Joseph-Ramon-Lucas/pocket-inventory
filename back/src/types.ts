@@ -22,6 +22,10 @@ export const StuffDtoInsertSchema = z.object({
 });
 
 export type UserCredentials = z.infer<typeof userCredentialSchema>;
+export type ValidUser = {
+	userId: number;
+	username: string;
+};
 export type StuffDto = z.infer<typeof StuffDtoSchema>;
 export type StuffDtoInsert = z.infer<typeof StuffDtoInsertSchema>;
 
