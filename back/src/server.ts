@@ -201,6 +201,12 @@ app.get("/api/stuff", async (req: Request, res: Response) => {
 				.status(400)
 				.json(errorResponse("Must provide a username as a query"));
 		}
+		// validate
+		const validUser: RequestResultBody<ValidUser[]> =
+			await verifyUsername(username);
+		if (!validUser.success) {
+			return res.status(404).json(errorResponse(validUser.errorMessage));
+		}
 
 		const stuff: StuffDto[] = (await db
 			.select({
@@ -241,6 +247,13 @@ app.get("/api/stuff/:itemId", async (req: Request, res: Response) => {
 			return res
 				.status(400)
 				.json(errorResponse("Must provide an itemId as parameter to the url"));
+		}
+
+		// validate
+		const validUser: RequestResultBody<ValidUser[]> =
+			await verifyUsername(username);
+		if (!validUser.success) {
+			return res.status(404).json(errorResponse(validUser.errorMessage));
 		}
 
 		const stuff: StuffDto[] = (await db
