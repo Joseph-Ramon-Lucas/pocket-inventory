@@ -49,3 +49,4 @@ insert into usersOwnStuff(ownerId, itemId) values(1, 4);
 -- select username,itemname from usersOwnStuff join users on users.userId = ownerid join stuff on stuff.itemId=usersOwnStuff.itemId;
 
 
+-- select * from stuff join usersownstuff on usersownstuff.itemid = stuff.itemid join users on users.userid =usersownstuff.ownerid where users.username='joe';
