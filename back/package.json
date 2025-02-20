@@ -16,17 +16,10 @@
 	"dependencies": {
 		"axios": "^1.6.8",
 		"bcrypt": "^5.1.1",
-<<<<<<< HEAD
 		"dotenv": "^16.4.7",
 		"drizzle-orm": "^0.39.3",
 		"cookie": "^0.6.0",
 		"cookie-parser": "^1.4.6",
-=======
-		"cookie": "^0.6.0",
-		"cookie-parser": "^1.4.6",
-		"dotenv": "^16.4.5",
-		"drizzle-orm": "^0.30.10",
->>>>>>> 5c7190517914d12d2dcbca613383c6f1325f7167
 		"express": "^4.19.2",
 		"jest": "^29.7.0",
 		"pg": "^8.13.3",
