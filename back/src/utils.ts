@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import type { z } from "zod";
 import {
 	errorResponse,
@@ -16,6 +17,19 @@ import {
 import { eq } from "drizzle-orm";
 import { db } from "./db";
 
+=======
+import { promise, type z } from "zod";
+import {
+	errorResponse,
+	type RequestResult,
+	successResponse,
+	userCredentialSchema,
+	type ErrorResult,
+	type UserCredentials,
+} from "./types";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
+>>>>>>> 5c7190517914d12d2dcbca613383c6f1325f7167
 import { tokenTable, usersTable } from "./db/schema";
 
 // if parsing fails, will return a list of string error messages
@@ -36,16 +50,24 @@ export function parseError(zodError: z.ZodError): string[] {
 export function verifyCredentialLength(
 	inputData: UserCredentials,
 ): RequestResult {
+<<<<<<< HEAD
 	const parseResult: z.SafeParseReturnType<UserCredentials, UserCredentials> =
 		userCredentialSchema.safeParse(inputData);
 	if (!parseResult.success) {
 		const zodErrors: string = "".concat(...parseError(parseResult.error));
 		console.log(zodErrors);
 		return errorResponse(zodErrors);
+=======
+	const parseResult = userCredentialSchema.safeParse(inputData);
+	if (!parseResult.success) {
+		// console.log(parseResult, "this is the parse result");
+		return errorResponse("Incorrect inputs when logging in");
+>>>>>>> 5c7190517914d12d2dcbca613383c6f1325f7167
 	}
 	return successResponse();
 }
 
+<<<<<<< HEAD
 export function verifyStuffBodyInsert(
 	inputData: StuffDtoInsert,
 ): RequestResult {
@@ -77,6 +99,8 @@ export async function verifyUsername(
 	return successResponseBody(validUser);
 }
 
+=======
+>>>>>>> 5c7190517914d12d2dcbca613383c6f1325f7167
 // // Timer Promise
 // export async function PromiseTime(ms: number): Promise<void> {
 //     const new Promise<void>((resolve, reject) =>
