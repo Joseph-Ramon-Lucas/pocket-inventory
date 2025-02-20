@@ -360,16 +360,16 @@ app.get("/api/stuff/:itemId", async (req: Request, res: Response) => {
 app.post("/api/stuff", async (req: Request, res: Response) => {
 	try {
 		const username: string = req.query.username as string;
-		const idIdToAdd: StuffDtoInsert = req.body;
+		const itemIdToAdd: StuffDtoInsert = req.body;
 		console.log("username", username);
-		console.log(idIdToAdd);
+		console.log(itemIdToAdd);
 
 		if (!username) {
 			return res
 				.status(400)
 				.json(errorResponse("Must provide a username as a query"));
 		}
-		if (idIdToAdd.itemName === null) {
+		if (itemIdToAdd.itemName === null) {
 			return res.status(400).json(errorResponse("Body missing itemName"));
 		}
 
@@ -379,7 +379,7 @@ app.post("/api/stuff", async (req: Request, res: Response) => {
 		if (!validUser.success) {
 			return res.status(404).json(errorResponse(validUser.errorMessage));
 		}
-		const verifyCheck: RequestResult = verifyStuffBodyInsert(idIdToAdd);
+		const verifyCheck: RequestResult = verifyStuffBodyInsert(itemIdToAdd);
 		if (!verifyCheck.success) {
 			return res
 				.status(400)
@@ -400,7 +400,7 @@ app.post("/api/stuff", async (req: Request, res: Response) => {
 			.where(
 				and(
 					eq(usersOwnStuffTable.ownerId, validUser[0].userId),
-					eq(stuffTable.itemName, idIdToAdd.itemName),
+					eq(stuffTable.itemName, itemIdToAdd.itemName),
 				),
 			);
 
@@ -408,13 +408,15 @@ app.post("/api/stuff", async (req: Request, res: Response) => {
 		if (dupCheck.length > 0) {
 			return res
 				.status(409)
-				.json(errorResponse(`Item Name ${idIdToAdd.itemName} already exists`));
+				.json(
+					errorResponse(`Item Name ${itemIdToAdd.itemName} already exists`),
+				);
 		}
 
 		// insert item into db
 		const insertedItem: StuffDto[] = await db
 			.insert(stuffTable)
-			.values(idIdToAdd)
+			.values(itemIdToAdd)
 			.returning();
 		console.log("INSERTED", insertedItem);
 		const junctionToInsert: { ownerId: number; itemId: number } = {
