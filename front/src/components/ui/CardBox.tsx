@@ -1,4 +1,4 @@
-import { Label } from "@radix-ui/react-dropdown-menu";
+import { Label } from "@/components/ui/label"
 import {
 	Card,
 	CardHeader,
