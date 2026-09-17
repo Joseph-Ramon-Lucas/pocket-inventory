@@ -23,8 +23,7 @@ import fetchAPI from "@/lib/fetchAPI";
 import { useEffect } from "react";
 import { StuffDto } from "@/lib/types/db-types";
 
-const API_URL =
-	import.meta.env.VITE_DEVELOPMENT_API_URL || "/api";
+const API_URL = import.meta.env.VITE_DEVELOPMENT_API_URL || "/api";
 
 export default function Dashboard() {
 	let inventoryList: StuffDto[] = new Array<StuffDto>();

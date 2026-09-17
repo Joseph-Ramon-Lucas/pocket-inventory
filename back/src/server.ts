@@ -38,6 +38,7 @@ import { isValid, z } from "zod";
 import { uuid } from "drizzle-orm/pg-core";
 import { CookieOptions } from "express";
 import cookieParser from "cookie-parser";
+import cors from "cors";
 
 // salts for password
 const saltRounds = 10;
@@ -52,6 +53,8 @@ app.use(express.static("public"));
 app.use(json());
 // parse the cookies
 app.use(cookieParser());
+
+app.use(cors({ origin: "http://localhost:5173" }));
 
 app.get("/api/", (req: Request, res: Response) => {
 	console.log("oi");
